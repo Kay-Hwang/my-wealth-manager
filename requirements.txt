@@ -1,0 +1,5 @@
+PyGithub
+streamlit
+pandas
+plotly
+yfinance
