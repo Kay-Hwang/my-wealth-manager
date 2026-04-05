@@ -9,6 +9,23 @@ from calc_module import get_holdings_per_ticker, get_monthly_dividends, get_acco
 # Streamlit 페이지 기본 설정 (와이드 모드)
 st.set_page_config(page_title="개인 자산 포트폴리오 관리", page_icon="📈", layout="wide")
 
+# 모바일 호환성을 위한 커스텀 CSS 주입
+st.markdown("""
+    <style>
+    /* 모바일 환경에서 좌우 여백을 줄여 공간 확보 */
+    .block-container {
+        padding-top: 1.5rem !important;
+        padding-bottom: 1.5rem !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+    /* 카드 컨테이너 내부 글씨 크기 조정 */
+    div[data-testid="stMarkdownContainer"] {
+        font-size: 0.95rem;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 def render_dashboard():
     st.title("📊 포트폴리오 대시보드")
     
@@ -139,7 +156,10 @@ def render_dashboard():
             fig.update_layout(
                 xaxis_type='category',
                 xaxis={'categoryorder': 'category ascending'},
-                xaxis_tickangle=-45
+                xaxis_tickangle=-45,
+                margin=dict(l=0, r=0, t=30, b=0), # 모바일 꽉 차게
+                legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5), # 범례를 위로
+                font=dict(size=10) # 폰트 사이즈 조정
             )
             st.plotly_chart(fig, use_container_width=True)
         else:
@@ -167,7 +187,10 @@ def render_dashboard():
             # 기본적으로 x축 뼈대를 카테고리형으로 순서대로 띄움
             fig2.update_layout(
                 xaxis_type='category',
-                xaxis={'categoryorder': 'category ascending'}
+                xaxis={'categoryorder': 'category ascending'},
+                margin=dict(l=0, r=0, t=30, b=0),
+                legend=dict(orientation="h", yanchor="bottom", y=1.1, xanchor="center", x=0.5),
+                font=dict(size=10)
             )
             
             # 카테고리가 5년(5개)을 초과할 경우 초기 화면을 5칸으로 잘라두고 하단에 스크롤(rangeslider) 바를 생성
