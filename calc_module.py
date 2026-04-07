@@ -128,12 +128,13 @@ def get_holdings_per_ticker(df=None):
 
     
     # 평가수익금 = (현재가 - 평단가) * 수량
-    result['평가수익금(지역통화)'] = (result['적용현재가'] - result['평균매수단가']) * result['총보유수량']
+    result['적용현재가'] = pd.to_numeric(result['적용현재가'], errors='coerce').fillna(pd.to_numeric(result['평균매수단가'], errors='coerce'))
+    result['평균매수단가'] = pd.to_numeric(result['평균매수단가'], errors='coerce')
+    result['평가수익금(지역통화)'] = (result['적용현재가'] - result['평균매수단가']) * pd.to_numeric(result['총보유수량'], errors='coerce')
     
     # 현재수익률(%)
-    result['현재수익률(%)'] = 0.0
-    mask = result['평균매수단가'] > 0
-    result.loc[mask, '현재수익률(%)'] = ((result.loc[mask, '적용현재가'] - result.loc[mask, '평균매수단가']) / result.loc[mask, '평균매수단가']) * 100
+    calc_rtn = ((result['적용현재가'] - result['평균매수단가']) / result['평균매수단가']) * 100
+    result['현재수익률(%)'] = calc_rtn.where(result['평균매수단가'] > 0, 0.0).astype(float)
     
     return result
 
@@ -237,14 +238,15 @@ def get_account_summary(df=None):
         result['누적배당금(KRW)'] = 0.0
         
     # 5. 수익률 최종 도출
-    result['현재수익금(KRW환산)'] = result['총자산(KRW환산)'] - result['총원금(KRW환산)']
-    result['현재수익률(%)'] = 0.0
-    mask = result['총원금(KRW환산)'] > 0
-    result.loc[mask, '현재수익률(%)'] = (result.loc[mask, '현재수익금(KRW환산)'] / result.loc[mask, '총원금(KRW환산)']) * 100
+    result['현재수익금(KRW환산)'] = pd.to_numeric(result['총자산(KRW환산)'], errors='coerce') - pd.to_numeric(result['총원금(KRW환산)'], errors='coerce')
     
-    result['누적수익금(KRW환산)'] = result['현재수익금(KRW환산)'] + result['누적배당금(KRW)']
-    result['누적수익률(%)'] = 0.0
-    result.loc[mask, '누적수익률(%)'] = (result.loc[mask, '누적수익금(KRW환산)'] / result.loc[mask, '총원금(KRW환산)']) * 100
+    calc_curr = (result['현재수익금(KRW환산)'] / pd.to_numeric(result['총원금(KRW환산)'], errors='coerce')) * 100
+    result['현재수익률(%)'] = calc_curr.where(result['총원금(KRW환산)'] > 0, 0.0).astype(float)
+    
+    result['누적수익금(KRW환산)'] = result['현재수익금(KRW환산)'] + pd.to_numeric(result['누적배당금(KRW)'], errors='coerce')
+    
+    calc_cum = (result['누적수익금(KRW환산)'] / pd.to_numeric(result['총원금(KRW환산)'], errors='coerce')) * 100
+    result['누적수익률(%)'] = calc_cum.where(result['총원금(KRW환산)'] > 0, 0.0).astype(float)
     
     result = result.sort_values(by='총자산(KRW환산)', ascending=False).reset_index(drop=True)
     return result
