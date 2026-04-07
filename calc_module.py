@@ -14,12 +14,12 @@ def get_live_info(tickers_tuple):
         if txt == 'CASH': continue
         
         search_tickers = [txt]
-        if txt.isdigit(): 
-            search_tickers = [txt + ".KS", txt + ".KQ"] # 한국 종목 대응
-        elif any('\uac00' <= char <= '\ud7a3' for char in txt):
-            prices[txt] = None
-            names[txt] = txt
-            continue
+        if len(txt) == 6 and txt.isalnum() and not txt.isalpha(): 
+            # 한국 종목코드(숫자 6자리 또는 숫자+영문 6자리)
+            search_tickers = [txt + ".KS", txt + ".KQ", txt]
+        elif txt.isdigit() and len(txt) <= 6:
+            # 예외 대비
+            search_tickers = [txt.zfill(6) + ".KS", txt.zfill(6) + ".KQ"]
             
         found = False
         for tick in search_tickers:
@@ -27,9 +27,15 @@ def get_live_info(tickers_tuple):
                 t = yf.Ticker(tick)
                 hist = t.history(period="1d")
                 if not hist.empty:
-                    prices[txt] = hist['Close'].values[-1]
-                    # 오류가 잦은 info에서 이름을 가져오고, 없으면 입력한 거 그대로
-                    name = t.info.get('shortName') or t.info.get('longName') or txt
+                    prices[txt] = float(hist['Close'].values[-1])
+                    
+                    name = txt
+                    try:
+                        info = t.info
+                        name = info.get('shortName') or info.get('longName') or txt
+                    except Exception:
+                        pass
+                        
                     names[txt] = name
                     found = True
                     break
