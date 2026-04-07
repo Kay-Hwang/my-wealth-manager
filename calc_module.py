@@ -68,8 +68,20 @@ def get_cash_balances_by_account(df=None):
             
     calc_df['현금증감'] = calc_df['거래종류'].apply(get_cash_sign) * calc_df['거래금액']
     
-    cash_df = calc_df.groupby(['계좌종류', '통화'])['현금증감'].sum().reset_index()
-    cash_df.rename(columns={'현금증감': '현금잔고'}, inplace=True)
+    # 시간 순서대로 처리하여 중간에 '매수' 기록으로 인해 예수금이 마이너스가 되는 현상을 방어하고 잔고를 0으로 맞춥니다.
+    calc_df['DateObj'] = pd.to_datetime(calc_df['날짜'], errors='coerce')
+    calc_df = calc_df.sort_values(by=['DateObj', '계좌종류', '통화'], kind='stable').reset_index(drop=True)
+    
+    def process_running_cash(group):
+        total_cash = 0.0
+        for val in group['현금증감']:
+            total_cash += val
+            # 매수 등으로 인해 현금이 마이너스로 떨어지는 경우 0 처리 (잔액 업데이트로 간주)
+            if total_cash < 0:
+                total_cash = 0.0
+        return pd.Series({'현금잔고': total_cash})
+        
+    cash_df = calc_df.groupby(['계좌종류', '통화']).apply(process_running_cash).reset_index()
     return cash_df
 
 def get_holdings_per_ticker(df=None):
